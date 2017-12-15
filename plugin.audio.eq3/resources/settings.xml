@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+	<category label="Devices">
+		<setting visible="eq(4,)" label="Discover devices" type="lsep" />
+		<setting label="No devices known. Run discover first!" type="text"
+			visible="eq(3,)" enable="false" />
+		<setting label="Start discovery" type="action"
+			action="RunScript($ID,discover)" default="" />
+
+		<setting label="Thermostat 1" type="lsep" visible="!eq(1,)" />
+		<setting label="MAC" type="text" id="dev_mac_0"
+			visible="!eq(0,)" enable="eq(2,true)" default="" />
+		<setting label="Alias" type="text" id="dev_alias_0" default=""
+			visible="!eq(-1,)" enable="eq(1,true)" />
+		<setting label="Enabled" type="bool" id="dev_enabled_0" default="true"
+			visible="!eq(-2,)" />
+		<setting label="Thermostat 2" type="lsep" visible="!eq(1,)" />
+		<setting label="MAC" type="text" id="dev_mac_1"
+			visible="!eq(0,)" enable="eq(2,true)" default="" />
+		<setting label="Alias" type="text" id="dev_alias_1" default=""
+			visible="!eq(-1,)" enable="eq(1,true)" />
+		<setting label="Enabled" type="bool" id="dev_enabled_1" default="true"
+			visible="!eq(-2,)" />
+		<setting label="Thermostat 2" type="lsep" visible="!eq(1,)" />
+		<setting label="MAC" type="text" id="dev_mac_2"
+			visible="!eq(0,)" enable="eq(2,true)" default="" />
+		<setting label="Alias" type="text" id="dev_alias_2" default=""
+			visible="!eq(-1,)" enable="eq(1,true)" />
+		<setting label="Enabled" type="bool" id="dev_enabled_2" default="true"
+			visible="!eq(-2,)" />
+		<setting label="Thermostat 4" type="lsep" visible="!eq(1,)" />
+		<setting label="MAC" type="text" id="dev_mac_3"
+			visible="!eq(0,)" enable="eq(2,true)" default="" />
+		<setting label="Alias" type="text" id="dev_alias_3" default=""
+			visible="!eq(-1,)" enable="eq(1,true)" />
+		<setting label="Enabled" type="bool" id="dev_enabled_3" default="true"
+			visible="!eq(-2,)" />
+		<setting label="Thermostat 5" type="lsep" visible="!eq(1,)" />
+		<setting label="MAC" type="text" id="dev_mac_4"
+			visible="!eq(0,)" enable="eq(2,true)" default="" />
+		<setting label="Alias" type="text" id="dev_alias_4" default=""
+			visible="!eq(-1,)" enable="eq(1,true)" />
+		<setting label="Enabled" type="bool" id="dev_enabled_4" default="true"
+			visible="!eq(-2,)" />
+	</category>
+	<category label="General settings">
+		<setting label="Temperature range" type="lsep" />
+	    <setting label="Min. temperature (°C)" type="slider" id="temp_min" default="15" range="5,.5,30" option="float" />
+	    <setting label="Max. temperature (°C)" type="slider" id="temp_max" default="25" range="5,.5,30" option="float" />
+	</category>
+</settings>

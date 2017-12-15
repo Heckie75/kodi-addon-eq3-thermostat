@@ -161,7 +161,7 @@ set thermostat(temperature)    ""
 set thermostat(vacation_date)  ""
 set thermostat(vacation_time)  ""
 
-set DAYS                    "Sat Sun Mon Tue Wed Thu Fri"
+set DAYS                    "Sat Sun Mon Tue Wed Thu Fri Weekend Work Everyday"
 
 proc log {l} {
   if {[log_user] != 0} {
@@ -651,7 +651,7 @@ proc setVacationMode {date daytime temp} {
 }
 
 proc setAwayMode {hours temp} {
-  set target_time [expr (int([clock seconds] / 1800) * 1800 + $hours * 3600)]
+  set target_time [expr (int([clock seconds] / 1800 + 1) * 1800 + $hours * 3600)]
   set daytime [clock format $target_time -format %H:%M]
   set date [clock format $target_time -format %y-%m-%d]
 

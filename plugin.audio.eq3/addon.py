@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
-from datetime import timedelta
 import json
 import os
 import re
@@ -33,20 +31,22 @@ class ContinueLoop(Exception):
 
 
 
-def _exec_gatttool(mac, params):
+class Eq3Exception(Exception):
+    pass
 
-    xbmc.log("mac: " + mac, xbmc.LOGNOTICE)
-    xbmc.log("params: " + " ".join(params), xbmc.LOGNOTICE)
+
+
+
+def _exec_gatttool(mac, params):
 
     call = [addon_dir + os.sep + "lib" + os.sep + "eq3.exp"]
     call += [ mac ] + params
 
     p = subprocess.Popen(call,
-                         stdout=subprocess.PIPE, 
+                         stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
-    
+
     out, err = p.communicate()
-    
     return out.decode("utf-8").split("\n")
 
 
@@ -55,20 +55,21 @@ def _exec_gatttool(mac, params):
 def _exec_bluetoothctl():
 
     macs = []
-    p1 = subprocess.Popen(["echo", "-e", "quit\n\n"], 
+    p1 = subprocess.Popen(["echo", "-e", "quit\n\n"],
                           stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(["bluetoothctl"], stdin=p1.stdout, 
-                          stdout=subprocess.PIPE, 
+    p2 = subprocess.Popen(["bluetoothctl"], stdin=p1.stdout,
+                          stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
     p1.stdout.close()
     out, err = p2.communicate()
-    
-    for match in re.finditer('([0-9A-F:]+) CC-RT-BLE', 
-                             out.decode("utf-8"), 
+
+    for match in re.finditer('([0-9A-F:]+) CC-RT-BLE',
+                             out.decode("utf-8"),
                              re.S):
         macs += [match.group(1)]
-            
+
     return macs
+
 
 
 
@@ -76,9 +77,9 @@ def discover():
 
     inserts = []
     free = []
-    
+
     macs = _exec_bluetoothctl()
-    
+
     for mac in macs:
         try:
             for i in range(SLOTS):
@@ -86,13 +87,13 @@ def discover():
                 senabled = settings.getSetting("dev_enable_%i" % i)
                 if smac == mac:
                     raise ContinueLoop
-                
+
                 elif (smac == "" or senabled == "false") and i not in free:
                     free += [ i ]
-                
-                    
+
+
             inserts += [ mac ]
-        
+
         except ContinueLoop:
             continue
 
@@ -109,11 +110,11 @@ def discover():
             slot = free.pop(0)
         else:
             continue
-        
+
         settings.setSetting("dev_mac_%i" % slot, mac)
         alias = settings.getSetting("dev_alias_%i" % slot)
         if alias == "":
-            settings.setSetting("dev_alias_%i" % slot, 
+            settings.setSetting("dev_alias_%i" % slot,
                                 "Thermostat %i" % (slot + 1))
 
     if len(macs) == 0:
@@ -134,8 +135,6 @@ def discover():
 
 
 def _get_directory_by_path(path):
-
-    xbmc.log("path: " + path, xbmc.LOGNOTICE)
 
     if path == "/":
         return _menu[0]
@@ -186,7 +185,7 @@ def _add_list_item(entry, path):
             param = "send",
             values = entry["send"],
             current = param_string)
-        
+
     if "param" in entry:
         param_string = _build_param_string(
             param = entry["param"][0],
@@ -229,12 +228,13 @@ def _build_vacation(temp):
 
     entries = []
     for i in [1, 2, 3, 4, 6, 9, 12, 24]:
-        
+
         entries += [
             {
                 "path" : "%i" % i,
                 "name" : "%s hours" % i,
                 "send" : [ "vacation", i, temp ],
+                "icon" : "icon_auto",
                 "msg" : "Set hold temperature of %.1f°C for %i hours" % (temp, i)
             }
         ]
@@ -246,9 +246,10 @@ def _build_vacation(temp):
 
 def _build_temperature():
 
-    entries = []
     _min = float(settings.getSetting("temp_min"))
     _max = float(settings.getSetting("temp_max")) + 1
+
+    entries = []
     for i in range(int((_max - 1) * 2), int(_min * 2) - 1, -1):
 
         t = i / 2.0
@@ -265,8 +266,10 @@ def _build_temperature():
     return entries
 
 
+
+
 def _parse_status(output):
-  
+
     status = {
         "temp" : None,
         "valve" : None,
@@ -280,23 +283,21 @@ def _parse_status(output):
         "until" : None,
         "success" : False
     }
-  
+
     for line in output:
-        
-        xbmc.log(">> " + line, xbmc.LOGNOTICE)
-        
+
         if line.startswith("Connection failed."):
             break
-        
+
         elif line.startswith("Temperature:"):
             m = re.findall("([0-9\.]+)", line)
             status["temp"] = float(m[0])
             status["success"] = True
-        
+
         elif line.startswith("Valve:"):
             m = re.findall("([0-9]+)", line)
             status["valve"] = int(m[0])
-        
+
         elif line.startswith("Mode:"):
             status["auto"] = "auto" in line
             status["vacation"] = "vacation" in line
@@ -305,10 +306,13 @@ def _parse_status(output):
             status["window"] = "open window" in line
             status["locked"] = "locked" in line
             status["battery"] = "low battery" in line
-  
+
         elif line.startswith("Vacation until:"):
             m = re.findall("(20[0-9-: ]+0)", line)
             status["until"] = m[0]
+
+    if not status["success"]:
+        raise Eq3Exception
 
     return status
 
@@ -316,7 +320,7 @@ def _parse_status(output):
 
 
 def _get_status(mac):
-    
+
     output = _exec_gatttool(mac, ["sync"])
     return _parse_status(output)
 
@@ -324,22 +328,22 @@ def _get_status(mac):
 
 
 def _build_device_menu(mac, status = None):
-    
+
     if not status:
         status = _get_status(mac)
-    
+
     stemp = "Target temperature: %.1f°C" % (status["temp"])
     stemp += "" if status["until"] == None else " hold until %s" \
-                % status["until"]       
-    stext = "Status: " 
-    stext += "Auto" if status["auto"] else "Manual"
-    stext += ", valve %i%%" % status["valve"] 
+                % status["until"]
 
+    stext = "Status: "
+    stext += "Auto" if status["auto"] else "Manual"
+    stext += ", valve %i%%" % status["valve"]
     stext += "" if not status["boost"] else ", boost"
     stext += "" if not status["window"] else ", window open"
     stext += "" if not status["locked"] else ", locked"
     stext += "" if not status["battery"] else ", battery is low!"
-    
+
     device = [
         {
             "path" : "target",
@@ -350,9 +354,7 @@ def _build_device_menu(mac, status = None):
             "path" : "status",
             "name" : stext,
             "icon" : "icon_info" # todo
-        }
-    ]
-    device += [
+        },
         {
             "path" : "temp",
             "name" : "Set new target temperature ...",
@@ -366,7 +368,8 @@ def _build_device_menu(mac, status = None):
             "icon" : "icon_vacation",
             "node" : []
         }
-    ]        
+    ]
+
     if status["boost"]:
         device += [
             {
@@ -387,6 +390,7 @@ def _build_device_menu(mac, status = None):
                 "msg" : "Start boost"
             }
         ]
+
     if status["auto"]:
         device += [
             {
@@ -407,47 +411,47 @@ def _build_device_menu(mac, status = None):
                 "msg" : "Set auto mode"
             }
         ]
-    
+
     return device
 
 
 
 
-def build_dir_structure(path, url_params):
+def _build_dir_structure(path, url_params):
 
     global _menu
-    
+
     splitted_path = path.split("/")
     splitted_path.pop(0)
-    
+
     entries = []
 
     # root
     if path == "/":
         for i in range(SLOTS):
-    
+
             mac = settings.getSetting("dev_mac_%i" % i)
             alias = settings.getSetting("dev_alias_%i" % i)
             enabled = settings.getSetting("dev_enabled_%i" % i)
-    
+
             if mac == "" or enabled != "true":
                 continue
 
-            entries = [
+            entries += [
                 {
                     "path" : mac,
                     "name" : alias,
                     "node" : []
                 }
             ]
-        
+
     # device main menu with status
     elif path != "/" and len(splitted_path) == 1:
-        
+
         status = None
         if "status" in url_params:
             status = json.loads(url_params["status"][0])
-        
+
         mac = splitted_path[0]
         entries = [
             {
@@ -485,7 +489,6 @@ def build_dir_structure(path, url_params):
             }
         ]
 
-
     _menu = [
         { # root
         "path" : "",
@@ -498,13 +501,19 @@ def build_dir_structure(path, url_params):
 
 def browse(path, url_params):
 
-    build_dir_structure(path, url_params)
-    
-    directory = _get_directory_by_path(path)
-    for entry in directory["node"]:
-        _add_list_item(entry, path)
+    try:
+        _build_dir_structure(path, url_params)
 
-    xbmcplugin.endOfDirectory(addon_handle)
+        directory = _get_directory_by_path(path)
+        for entry in directory["node"]:
+            _add_list_item(entry, path)
+
+        xbmcplugin.endOfDirectory(addon_handle)
+
+    except Eq3Exception:
+        xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
+                        % ("Synchronization failed!",
+                           "Try again!", addon_dir))
 
 
 
@@ -522,15 +531,19 @@ def execute(path, params):
     xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
                         % (params["msg"][0], "Be patient ...", addon_dir))
 
-    output = _exec_gatttool(mac, params["send"])
-    status = _parse_status(output)
+    try:
+        output = _exec_gatttool(mac, params["send"])
+        status = _parse_status(output)
 
-    xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
+        xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
                         % (params["msg"][0], "successful", addon_dir))
 
-    xbmc.executebuiltin('Container.Update("plugin://%s/%s?status=%s","update")' 
+        xbmc.executebuiltin('Container.Update("plugin://%s/%s?status=%s","update")'
                         % (__PLUGIN_ID__, mac, json.dumps(status)))
 
+    except Eq3Exception:
+        xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
+                        % (params["msg"][0], "Failed! Try again", addon_dir))
 
 
 
@@ -538,7 +551,7 @@ if __name__ == '__main__':
 
     if sys.argv[1] == "discover":
         discover()
-    else:    
+    else:
         addon_handle = int(sys.argv[1])
         path = urlparse.urlparse(sys.argv[0]).path
         url_params = urlparse.parse_qs(sys.argv[2][1:])

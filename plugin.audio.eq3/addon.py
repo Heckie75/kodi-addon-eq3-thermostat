@@ -351,7 +351,9 @@ def _build_device_menu(mac, status = None):
         sicon = "icon_window"
     elif status["boost"]:
         sicon = "icon_boost"
-    elif status["auto"] or status["vacation"]:
+    elif status["vacation"]:
+        sicon = "icon_timer"
+    elif status["auto"]:
         sicon = "icon_auto"
     elif not status["auto"]:
         sicon = "icon_manual"
@@ -488,7 +490,7 @@ def _build_dir_structure(path, url_params):
             }
         ]
 
-    # submenu "set temperature"
+    # submenu "set vacation"
     elif len(splitted_path) == 2 and splitted_path[1] == "hold":
         entries = [
             {
@@ -540,7 +542,6 @@ def execute(path, params):
         return
 
 
-    xbmc.log(json.dumps(params, indent = 2), xbmc.LOGNOTICE)
     mac = splitted_path[1]
 
     xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"

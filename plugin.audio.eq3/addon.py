@@ -234,7 +234,7 @@ def _build_vacation(temp):
                 "path" : "%i" % i,
                 "name" : "%s hours" % i,
                 "send" : [ "vacation", i, temp ],
-                "icon" : "icon_auto",
+                "icon" : "icon_timer",
                 "msg" : "Set hold temperature of %.1f°C for %i hours" % (temp, i)
             }
         ]
@@ -344,28 +344,42 @@ def _build_device_menu(mac, status = None):
     stext += "" if not status["locked"] else ", locked"
     stext += "" if not status["battery"] else ", battery is low!"
 
+    sicon = ""
+    if status["battery"]:
+        sicon = "icon_battery"
+    elif status["window"]:
+        sicon = "icon_window"
+    elif status["boost"]:
+        sicon = "icon_boost"
+    elif status["auto"] or status["vacation"]:
+        sicon = "icon_auto"
+    elif not status["auto"]:
+        sicon = "icon_manual"
+    else:
+        sicon = "icon_info"
+
     device = [
         {
             "path" : "target",
             "name" : stemp,
-            "icon" : "icon_temp_205" # todo
+            "icon" : "icon_temp_%i" % int(status["temp"] * 10)
         },
         {
             "path" : "status",
             "name" : stext,
-            "icon" : "icon_info" # todo
+            "icon" : sicon
         },
         {
             "path" : "temp",
-            "name" : "Set new target temperature ...",
-            "icon" : "icon_temp",
+            "name" : "Set target temperature ...",
+            "icon" : "icon_manual",
             "node" : []
         },
         {
             "path" : "hold",
             "param" : ["temp", status["temp"]],
             "name" : "Hold target temperature of %.1f°C for the next ..." % (status["temp"]),
-            "icon" : "icon_vacation",
+            "icon" : "icon_timer",
             "node" : []
         }
     ]
@@ -482,6 +496,7 @@ def _build_dir_structure(path, url_params):
                 "node" : [
                     {
                         "path" : "hold",
+                        "icon" : "icon_timer",
                         "node" : _build_vacation(
                             float(url_params["temp"][0]))
                     }

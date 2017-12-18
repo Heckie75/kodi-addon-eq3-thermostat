@@ -27,7 +27,26 @@
 		</news>
 		<assets>
 			<icon>icon.png</icon>
-			<!-- <screenshot>resources/assets/screen_1_info.png</screenshot> -->
+			<screenshot>resources/assets/screenshot_1.png</screenshot>
+			<screenshot>resources/assets/screenshot_2.png</screenshot>
+			<screenshot>resources/assets/screenshot_3.png</screenshot>
+			<screenshot>resources/assets/screenshot_4.png</screenshot>
+			<screenshot>resources/assets/screenshot_5.png</screenshot>
+			<screenshot>resources/assets/screenshot_6.png</screenshot>
+			<screenshot>resources/assets/screenshot_7.png</screenshot>
+			<screenshot>resources/assets/screenshot_8.png</screenshot>
+			<screenshot>resources/assets/screenshot_9.png</screenshot>
+			<screenshot>resources/assets/screenshot_10.png</screenshot>
+			<screenshot>resources/assets/screenshot_11.png</screenshot>
+			<screenshot>resources/assets/screenshot_12.png</screenshot>
+			<screenshot>resources/assets/screenshot_13.png</screenshot>
+			<screenshot>resources/assets/screenshot_14.png</screenshot>
+			<screenshot>resources/assets/screenshot_15.png</screenshot>
+			<screenshot>resources/assets/screenshot_16.png</screenshot>
+			<screenshot>resources/assets/screenshot_17.png</screenshot>
+			<screenshot>resources/assets/screenshot_18.png</screenshot>
+			<screenshot>resources/assets/screenshot_19.png</screenshot>
+			<screenshot>resources/assets/screenshot_20.png</screenshot>
 		</assets>
 	</extension>
 </addon>

@@ -235,7 +235,7 @@ def _build_vacation(temp):
                 "name" : "%s hours" % i,
                 "send" : [ "vacation", i, temp ],
                 "icon" : "icon_timer",
-                "msg" : "Set hold temperature of %.1f°C for %i hours" % (temp, i)
+                "msg" : "Hold %.1f°C for %i hours" % (temp, i)
             }
         ]
 
@@ -259,7 +259,7 @@ def _build_temperature():
                 "name" : "%.1f°C" % t,
                 "icon" : "icon_temp_%.0f" % (t * 10),
                 "send" : ["temp", "%.1f" % t ],
-                "msg" : "Set target temperature to %.1f°C" % t
+                "msg" : "Set temperature to %.1f°C" % t
             }
         ]
 

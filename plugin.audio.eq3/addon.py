@@ -380,7 +380,7 @@ def _build_device_menu(mac, status = None):
         {
             "path" : "hold",
             "param" : ["temp", status["temp"]],
-            "name" : "Hold target temperature of %.1f°C for the next ..." % (status["temp"]),
+            "name" : "Hold %.1f°C for the next ..." % (status["temp"]),
             "icon" : "icon_timer",
             "node" : []
         }

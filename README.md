@@ -27,10 +27,6 @@ Kodi addon in order to control eQ-3 thermostat
 
 <img src="plugin.audio.eq3/resources/assets/screenshot_11.png?raw=true">
 
-<img src="plugin.audio.eq3/resources/assets/screenshot_12.png?raw=true">
-
-<img src="plugin.audio.eq3/resources/assets/screenshot_13.png?raw=true">
-
 <img src="plugin.audio.eq3/resources/assets/screenshot_14.png?raw=true">
 
 <img src="plugin.audio.eq3/resources/assets/screenshot_15.png?raw=true">

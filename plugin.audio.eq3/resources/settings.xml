@@ -13,7 +13,7 @@
 		<setting label="Alias" type="text" id="dev_alias_0" default=""
 			visible="!eq(-1,)" enable="eq(1,true)" />
 		<setting label="Enabled" type="bool" id="dev_enabled_0" default="true"
-			visible="!eq(-2,)" />
+			visible="!eq(-2,)" />		
 		<setting label="Thermostat 2" type="lsep" visible="!eq(1,)" />
 		<setting label="MAC" type="text" id="dev_mac_1"
 			visible="!eq(0,)" enable="false" default="" />

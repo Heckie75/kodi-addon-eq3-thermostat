@@ -336,9 +336,9 @@ def _build_device_menu(mac, status = None):
     stemp += "" if status["until"] == None else " hold until %s" \
                 % status["until"]
 
-    stext = "Status: "
+    stext = "Mode: "
     stext += "Auto" if status["auto"] else "Manual"
-    stext += ", valve %i%%" % status["valve"]
+    stext += ", heating" if status["valve"] > 0 else ", not heating"
     stext += "" if not status["boost"] else ", boost"
     stext += "" if not status["window"] else ", window open"
     stext += "" if not status["locked"] else ", locked"
@@ -364,17 +364,14 @@ def _build_device_menu(mac, status = None):
         {
             "path" : "target",
             "name" : stemp,
-            "icon" : "icon_temp_%i" % int(status["temp"] * 10)
+            "icon" : "icon_temp_%i" % int(status["temp"] * 10),
+            "node" : []
         },
         {
-            "path" : "status",
+            "path" : "mode",
+            "param" : [ "status", json.dumps(status)],
             "name" : stext,
-            "icon" : sicon
-        },
-        {
-            "path" : "temp",
-            "name" : "Set target temperature ...",
-            "icon" : "icon_manual",
+            "icon" : sicon,
             "node" : []
         },
         {
@@ -386,49 +383,102 @@ def _build_device_menu(mac, status = None):
         }
     ]
 
+    return device
+
+
+
+
+def _build_mode_menu(mac, status = None):
+
+    if not status:
+        status = _get_status(mac)
+
+    mode = []
+
     if status["boost"]:
-        device += [
+        mode += [
             {
                 "path" : "boost",
-                "name" : "Stop boost",
+                "name" : "Stop boost ...",
                 "icon" : "icon_boost_off",
                 "send" : ["boost", "off"],
-                "msg" : "Stop boost"
+                "msg" : "Stop boost ...",
+                "node" : []
             }
         ]
     else:
-        device += [
+        mode += [
             {
                 "path" : "boost",
-                "name" : "Start boost",
+                "name" : "Boost for 5 minutes ...",
                 "icon" : "icon_boost",
                 "send" : ["boost"],
-                "msg" : "Start boost"
+                "msg" : "Start boost ...",
+                "node" : []
             }
         ]
 
-    if status["auto"]:
-        device += [
+    name = "Hold temperature is active. " if status["vacation"] else ""
+    if not status["auto"] or status["vacation"]:
+        mode += [
             {
                 "path" : "mode",
-                "name" : "Set manual",
+                "name" : name + "Switch to auto mode ...",
+                "icon" : "icon_auto",
+                "send" : ["auto"],
+                "msg" : "Switch to auto mode ...",
+                "node" : []
+            }
+        ]
+
+    if status["auto"] or status["vacation"]:
+        mode += [
+            {
+                "path" : "mode",
+                "name" : name + "Switch to manual mode ...",
                 "icon" : "icon_manual",
                 "send" : ["manual"],
-                "msg" : "Set manual mode"
+                "msg" : "Switch to manual mode ...",
+                "node" : []
+            }
+        ]
+
+    if status["valve"] > 0:
+        mode += [
+            {
+                "path" : "valve",
+                "name" : "Heating. Valve is %i%% opened." % status["valve"],
+                "icon" : "icon_info"
             }
         ]
     else:
-        device += [
+        mode += [
             {
-                "path" : "mode",
-                "name" : "Set auto",
-                "icon" : "icon_auto",
-                "send" : ["auto"],
-                "msg" : "Set auto mode"
+                "path" : "valve",
+                "name" : "Heating is paused. Valve is closed.",
+                "icon" : "icon_info"
             }
         ]
 
-    return device
+    if status["battery"]:
+        mode += [
+            {
+                "path" : "battery",
+                "name" : "Battery is low.",
+                "icon" : "icon_battery"
+            }
+        ]
+    if status["window"]:
+        mode += [
+            {
+                "path" : "window",
+                "name" : "Window is open.",
+                "icon" : "icon_window"
+            }
+        ]
+
+
+    return mode
 
 
 
@@ -477,14 +527,36 @@ def _build_dir_structure(path, url_params):
         ]
 
     # submenu "set temperature"
-    elif len(splitted_path) == 2 and splitted_path[1] == "temp":
+    elif len(splitted_path) == 2 and splitted_path[1] == "target":
         entries = [
             {
                 "path" : splitted_path[0],
                 "node" : [
                     {
-                        "path" : "temp",
+                        "path" : "target",
                         "node" : _build_temperature()
+                    }
+                ]
+            }
+        ]
+
+    # submenu "set mode"
+    elif len(splitted_path) == 2 and splitted_path[1] == "mode":
+
+        status = None
+        if "status" in url_params:
+            status = json.loads(url_params["status"][0])
+
+        mac = splitted_path[0]
+
+        entries = [
+            {
+                "path" : splitted_path[0],
+                "param" : [ "status", json.dumps(status)],
+                "node" : [
+                    {
+                        "path" : "mode",
+                        "node" : _build_mode_menu(mac, status)
                     }
                 ]
             }

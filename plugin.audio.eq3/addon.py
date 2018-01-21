@@ -8,6 +8,7 @@ import subprocess
 import sys
 import urlparse
 
+import xbmc
 import xbmcgui
 import xbmcplugin
 import xbmcaddon
@@ -616,21 +617,24 @@ def execute(path, params):
 
     mac = splitted_path[1]
 
-    xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
+    if "silent" not in params:
+        xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
                         % (params["msg"][0], "Be patient ...", addon_dir))
 
     try:
         output = _exec_gatttool(mac, params["send"])
         status = _parse_status(output)
 
-        xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
+        if "silent" not in params:
+            xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
                         % (params["msg"][0], "successful", addon_dir))
 
-        xbmc.executebuiltin('Container.Update("plugin://%s/%s?status=%s","update")'
+            xbmc.executebuiltin('Container.Update("plugin://%s/%s?status=%s","update")'
                         % (__PLUGIN_ID__, mac, json.dumps(status)))
 
     except Eq3Exception:
-        xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
+        if "silent" not in params:
+            xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
                         % (params["msg"][0], "Failed! Try again", addon_dir))
 
 

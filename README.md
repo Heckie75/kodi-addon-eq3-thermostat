@@ -2,7 +2,7 @@
 Kodi addon in order to control eQ-3 thermostat
 
 
-[kodi-addon-eq3-thermostat.tgz](/kodi-addon-eq3-thermostat.tgz)
+[kodi-addon-eq3-thermostat.tgz](/kodi-addon-eq3-thermostat.zip)
 
 
 <img src="plugin.audio.eq3/resources/assets/screenshot_1.png?raw=true">

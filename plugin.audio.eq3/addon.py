@@ -56,7 +56,7 @@ def _exec_gatttool(mac, params):
 def _exec_bluetoothctl():
 
     macs = []
-    p1 = subprocess.Popen(["echo", "-e", "quit\n\n"],
+    p1 = subprocess.Popen(["echo", "-e", "devices\nquit\n\n"],
                           stdout=subprocess.PIPE)
     p2 = subprocess.Popen(["bluetoothctl"], stdin=p1.stdout,
                           stdout=subprocess.PIPE,
@@ -65,8 +65,7 @@ def _exec_bluetoothctl():
     out, err = p2.communicate()
 
     for match in re.finditer('([0-9A-F:]+) CC-RT-BLE',
-                             out.decode("utf-8"),
-                             re.S):
+                             out.decode("utf-8")):
         macs += [match.group(1)]
 
     return macs
@@ -176,9 +175,6 @@ def _add_list_item(entry, path):
 
     item_path = path + "/" + entry["path"]
     item_id = item_path.replace("/", "_")
-
-    if settings.getSetting("display%s" % item_id) == "false":
-        return
 
     param_string = ""
     if "send" in entry:

@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <settings>
+	<category label="Host">
+		<setting id="host" type="enum" label="Host type" values="local|remote over ssh" />
+		<setting label="IP Address" type="ipaddress" id="host_ip" visible="!eq(-1,0)" default="127.0.0.1" />
+		<setting label="Port" type="number" id="host_port" visible="!eq(-2,0)" default="22" />
+		<setting label="Requires passphraseless SSH or keystore!" type="text" id="host_note" visible="!eq(-3,0)" enable="false" value="" />
+		<setting label="Path to eq3.exp command" type="text" id="host_path" visible="!eq(-4,0)" default="/home/raspi/eq3.exp" />
+	</category>
 	<category label="Devices">
 		<setting visible="eq(4,)" label="Discover devices" type="lsep" />
 		<setting label="No devices known. Run discover first!" type="text"

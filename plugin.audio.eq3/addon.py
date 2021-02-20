@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import json
@@ -6,22 +6,20 @@ import os
 import re
 import subprocess
 import sys
-import urlparse
+import urllib.parse
 
 import xbmc
 import xbmcgui
 import xbmcplugin
 import xbmcaddon
+import xbmcvfs
 
 __PLUGIN_ID__ = "plugin.audio.eq3"
 
 SLOTS = 5
 
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-settings = xbmcaddon.Addon(id=__PLUGIN_ID__);
-addon_dir = xbmc.translatePath( settings.getAddonInfo('path') )
+settings = xbmcaddon.Addon(id=__PLUGIN_ID__)
+addon_dir = xbmcvfs.translatePath(settings.getAddonInfo('path'))
 
 _menu = []
 
@@ -30,18 +28,23 @@ class ContinueLoop(Exception):
     pass
 
 
-
-
 class Eq3Exception(Exception):
     pass
 
 
-
-
 def _exec_gatttool(mac, params):
 
-    call = [addon_dir + os.sep + "lib" + os.sep + "eq3.exp"]
-    call += [ mac ] + params
+    if settings.getSetting("host") == "1":
+        # remote over ssh
+        call = ["ssh", settings.getSetting("host_ip"),
+                "-p %s" % settings.getSetting("host_port"),
+                settings.getSetting("host_path")]
+        call += [mac] + params
+
+    else:
+        # local
+        call = [addon_dir + os.sep + "lib" + os.sep + "eq3.exp"]
+        call += [mac] + params
 
     p = subprocess.Popen(call,
                          stdout=subprocess.PIPE,
@@ -51,17 +54,27 @@ def _exec_gatttool(mac, params):
     return out.decode("utf-8").split("\n")
 
 
-
-
 def _exec_bluetoothctl():
 
     macs = []
-    p1 = subprocess.Popen(["echo", "-e", "devices\nquit\n\n"],
-                          stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(["bluetoothctl"], stdin=p1.stdout,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE)
-    p1.stdout.close()
+
+    if settings.getSetting("host") == "1":
+        # remote over ssh
+        p2 = subprocess.Popen(["ssh", settings.getSetting("host_ip"),
+                               "-p %s" % settings.getSetting("host_port"),
+                               "echo -e 'devices\nquit\n\n' | bluetoothctl"],
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+
+    else:
+        # local
+        p1 = subprocess.Popen(["echo", "-e", "devices\nquit\n\n"],
+                              stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(["bluetoothctl"], stdin=p1.stdout,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+        p1.stdout.close()
+
     out, err = p2.communicate()
 
     for match in re.finditer('([0-9A-F:]+) CC-RT-BLE',
@@ -69,8 +82,6 @@ def _exec_bluetoothctl():
         macs += [match.group(1)]
 
     return macs
-
-
 
 
 def discover():
@@ -89,10 +100,9 @@ def discover():
                     raise ContinueLoop
 
                 elif (smac == "" or senabled == "false") and i not in free:
-                    free += [ i ]
+                    free += [i]
 
-
-            inserts += [ mac ]
+            inserts += [mac]
 
         except ContinueLoop:
             continue
@@ -102,7 +112,6 @@ def discover():
             "Notification(All slots are occupied, "
             "Disable a device from list!)")
         return
-
 
     for mac in inserts:
         slot = None
@@ -132,8 +141,6 @@ def discover():
             "%i new thermostates added to device list)" % len(inserts))
 
 
-
-
 def _get_directory_by_path(path):
 
     if path == "/":
@@ -152,9 +159,7 @@ def _get_directory_by_path(path):
     return directory
 
 
-
-
-def _build_param_string(param, values, current = ""):
+def _build_param_string(param, values, current=""):
 
     if values == None:
         return current
@@ -164,8 +169,6 @@ def _build_param_string(param, values, current = ""):
         current += param + "=" + str(v)
 
     return current
-
-
 
 
 def _add_list_item(entry, path):
@@ -179,21 +182,21 @@ def _add_list_item(entry, path):
     param_string = ""
     if "send" in entry:
         param_string = _build_param_string(
-            param = "send",
-            values = entry["send"],
-            current = param_string)
+            param="send",
+            values=entry["send"],
+            current=param_string)
 
     if "param" in entry:
         param_string = _build_param_string(
-            param = entry["param"][0],
-            values = [ entry["param"][1] ],
-            current = param_string)
+            param=entry["param"][0],
+            values=[entry["param"][1]],
+            current=param_string)
 
     if "msg" in entry:
         param_string = _build_param_string(
-            param = "msg",
-            values = [ entry["msg"] ],
-            current = param_string)
+            param="msg",
+            values=[entry["msg"]],
+            current=param_string)
 
     if "node" in entry:
         is_folder = True
@@ -205,20 +208,20 @@ def _add_list_item(entry, path):
         label = settings.getSetting("label%s" % item_id)
 
     if "icon" in entry:
-        icon_file = os.path.join(addon_dir, "resources", "assets", entry["icon"] + ".png")
+        icon_file = os.path.join(
+            addon_dir, "resources", "assets", entry["icon"] + ".png")
     else:
         icon_file = None
 
-    li = xbmcgui.ListItem(label, iconImage=icon_file)
+    li = xbmcgui.ListItem(label)
+    li.setArt({"thumb": icon_file})
 
     xbmcplugin.addDirectoryItem(handle=addon_handle,
-                            listitem=li,
-                            url="plugin://" + __PLUGIN_ID__
-                            + item_path
-                            + param_string,
-                            isFolder=is_folder)
-
-
+                                listitem=li,
+                                url="plugin://" + __PLUGIN_ID__
+                                + item_path
+                                + param_string,
+                                isFolder=is_folder)
 
 
 def _build_vacation(temp):
@@ -228,17 +231,15 @@ def _build_vacation(temp):
 
         entries += [
             {
-                "path" : "%i" % i,
-                "name" : "%s hours" % i,
-                "send" : [ "vacation", i, temp ],
-                "icon" : "icon_timer",
-                "msg" : "Hold %.1f°C for %i hours" % (temp, i)
+                "path": "%i" % i,
+                "name": "%s hours" % i,
+                "send": ["vacation", i, temp],
+                "icon": "icon_timer",
+                "msg": "Hold %.1f°C for %i hours" % (temp, i)
             }
         ]
 
     return entries
-
-
 
 
 def _build_temperature():
@@ -252,33 +253,31 @@ def _build_temperature():
         t = i / 2.0
         entries += [
             {
-                "path" : "%i" % i,
-                "name" : "%.1f°C" % t,
-                "icon" : "icon_temp_%.0f" % (t * 10),
-                "send" : ["temp", "%.1f" % t ],
-                "msg" : "Set temperature to %.1f°C" % t
+                "path": "%i" % i,
+                "name": "%.1f°C" % t,
+                "icon": "icon_temp_%.0f" % (t * 10),
+                "send": ["temp", "%.1f" % t],
+                "msg": "Set temperature to %.1f°C" % t
             }
         ]
 
     return entries
 
 
-
-
 def _parse_status(output):
 
     status = {
-        "temp" : None,
-        "valve" : None,
-        "auto" : None,
-        "boost" : None,
-        "dst" : None,
-        "window" : None,
-        "locked" : None,
-        "battery" : None,
-        "vacation" : None,
-        "until" : None,
-        "success" : False
+        "temp": None,
+        "valve": None,
+        "auto": None,
+        "boost": None,
+        "dst": None,
+        "window": None,
+        "locked": None,
+        "battery": None,
+        "vacation": None,
+        "until": None,
+        "success": False
     }
 
     for line in output:
@@ -314,24 +313,20 @@ def _parse_status(output):
     return status
 
 
-
-
 def _get_status(mac):
 
     output = _exec_gatttool(mac, ["sync"])
     return _parse_status(output)
 
 
-
-
-def _build_device_menu(mac, status = None):
+def _build_device_menu(mac, status=None):
 
     if not status:
         status = _get_status(mac)
 
     stemp = "Target temperature: %.1f°C" % (status["temp"])
     stemp += "" if status["until"] == None else " hold until %s" \
-                % status["until"]
+        % status["until"]
 
     stext = "Mode: "
     stext += "Auto" if status["auto"] else "Manual"
@@ -359,33 +354,31 @@ def _build_device_menu(mac, status = None):
 
     device = [
         {
-            "path" : "target",
-            "name" : stemp,
-            "icon" : "icon_temp_%i" % int(status["temp"] * 10),
-            "node" : []
+            "path": "target",
+            "name": stemp,
+            "icon": "icon_temp_%i" % int(status["temp"] * 10),
+            "node": []
         },
         {
-            "path" : "mode",
-            "param" : [ "status", json.dumps(status)],
-            "name" : stext,
-            "icon" : sicon,
-            "node" : []
+            "path": "mode",
+            "param": ["status", json.dumps(status)],
+            "name": stext,
+            "icon": sicon,
+            "node": []
         },
         {
-            "path" : "hold",
-            "param" : ["temp", status["temp"]],
-            "name" : "Hold %.1f°C for the next ..." % (status["temp"]),
-            "icon" : "icon_timer",
-            "node" : []
+            "path": "hold",
+            "param": ["temp", status["temp"]],
+            "name": "Hold %.1f°C for the next ..." % (status["temp"]),
+            "icon": "icon_timer",
+            "node": []
         }
     ]
 
     return device
 
 
-
-
-def _build_mode_menu(mac, status = None):
+def _build_mode_menu(mac, status=None):
 
     if not status:
         status = _get_status(mac)
@@ -395,23 +388,23 @@ def _build_mode_menu(mac, status = None):
     if status["boost"]:
         mode += [
             {
-                "path" : "boost",
-                "name" : "Stop boost ...",
-                "icon" : "icon_boost_off",
-                "send" : ["boost", "off"],
-                "msg" : "Stop boost ...",
-                "node" : []
+                "path": "boost",
+                "name": "Stop boost ...",
+                "icon": "icon_boost_off",
+                "send": ["boost", "off"],
+                "msg": "Stop boost ...",
+                "node": []
             }
         ]
     else:
         mode += [
             {
-                "path" : "boost",
-                "name" : "Boost for 5 minutes ...",
-                "icon" : "icon_boost",
-                "send" : ["boost"],
-                "msg" : "Start boost ...",
-                "node" : []
+                "path": "boost",
+                "name": "Boost for 5 minutes ...",
+                "icon": "icon_boost",
+                "send": ["boost"],
+                "msg": "Start boost ...",
+                "node": []
             }
         ]
 
@@ -419,65 +412,62 @@ def _build_mode_menu(mac, status = None):
     if not status["auto"] or status["vacation"]:
         mode += [
             {
-                "path" : "mode",
-                "name" : name + "Switch to auto mode ...",
-                "icon" : "icon_auto",
-                "send" : ["auto"],
-                "msg" : "Switch to auto mode ...",
-                "node" : []
+                "path": "mode",
+                "name": name + "Switch to auto mode ...",
+                "icon": "icon_auto",
+                "send": ["auto"],
+                "msg": "Switch to auto mode ...",
+                "node": []
             }
         ]
 
     if status["auto"] or status["vacation"]:
         mode += [
             {
-                "path" : "mode",
-                "name" : name + "Switch to manual mode ...",
-                "icon" : "icon_manual",
-                "send" : ["manual"],
-                "msg" : "Switch to manual mode ...",
-                "node" : []
+                "path": "mode",
+                "name": name + "Switch to manual mode ...",
+                "icon": "icon_manual",
+                "send": ["manual"],
+                "msg": "Switch to manual mode ...",
+                "node": []
             }
         ]
 
     if status["valve"] > 0:
         mode += [
             {
-                "path" : "valve",
-                "name" : "Heating. Valve is %i%% opened." % status["valve"],
-                "icon" : "icon_info"
+                "path": "valve",
+                "name": "Heating. Valve is %i%% opened." % status["valve"],
+                "icon": "icon_info"
             }
         ]
     else:
         mode += [
             {
-                "path" : "valve",
-                "name" : "Heating is paused. Valve is closed.",
-                "icon" : "icon_info"
+                "path": "valve",
+                "name": "Heating is paused. Valve is closed.",
+                "icon": "icon_info"
             }
         ]
 
     if status["battery"]:
         mode += [
             {
-                "path" : "battery",
-                "name" : "Battery is low.",
-                "icon" : "icon_battery"
+                "path": "battery",
+                "name": "Battery is low.",
+                "icon": "icon_battery"
             }
         ]
     if status["window"]:
         mode += [
             {
-                "path" : "window",
-                "name" : "Window is open.",
-                "icon" : "icon_window"
+                "path": "window",
+                "name": "Window is open.",
+                "icon": "icon_window"
             }
         ]
 
-
     return mode
-
-
 
 
 def _build_dir_structure(path, url_params):
@@ -502,9 +492,9 @@ def _build_dir_structure(path, url_params):
 
             entries += [
                 {
-                    "path" : mac,
-                    "name" : alias,
-                    "node" : []
+                    "path": mac,
+                    "name": alias,
+                    "node": []
                 }
             ]
 
@@ -518,8 +508,8 @@ def _build_dir_structure(path, url_params):
         mac = splitted_path[0]
         entries = [
             {
-                "path" : mac,
-                "node" : _build_device_menu(mac, status)
+                "path": mac,
+                "node": _build_device_menu(mac, status)
             }
         ]
 
@@ -527,11 +517,11 @@ def _build_dir_structure(path, url_params):
     elif len(splitted_path) == 2 and splitted_path[1] == "target":
         entries = [
             {
-                "path" : splitted_path[0],
-                "node" : [
+                "path": splitted_path[0],
+                "node": [
                     {
-                        "path" : "target",
-                        "node" : _build_temperature()
+                        "path": "target",
+                        "node": _build_temperature()
                     }
                 ]
             }
@@ -548,12 +538,12 @@ def _build_dir_structure(path, url_params):
 
         entries = [
             {
-                "path" : splitted_path[0],
-                "param" : [ "status", json.dumps(status)],
-                "node" : [
+                "path": splitted_path[0],
+                "param": ["status", json.dumps(status)],
+                "node": [
                     {
-                        "path" : "mode",
-                        "node" : _build_mode_menu(mac, status)
+                        "path": "mode",
+                        "node": _build_mode_menu(mac, status)
                     }
                 ]
             }
@@ -563,12 +553,12 @@ def _build_dir_structure(path, url_params):
     elif len(splitted_path) == 2 and splitted_path[1] == "hold":
         entries = [
             {
-                "path" : splitted_path[0],
-                "node" : [
+                "path": splitted_path[0],
+                "node": [
                     {
-                        "path" : "hold",
-                        "icon" : "icon_timer",
-                        "node" : _build_vacation(
+                        "path": "hold",
+                        "icon": "icon_timer",
+                        "node": _build_vacation(
                             float(url_params["temp"][0]))
                     }
                 ]
@@ -576,13 +566,11 @@ def _build_dir_structure(path, url_params):
         ]
 
     _menu = [
-        { # root
-        "path" : "",
-        "node" : entries
+        {  # root
+            "path": "",
+            "node": entries
         }
     ]
-
-
 
 
 def browse(path, url_params):
@@ -598,10 +586,8 @@ def browse(path, url_params):
 
     except Eq3Exception:
         xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
-                        % ("Synchronization failed!",
-                           "Try again!", addon_dir))
-
-
+                            % ("Synchronization failed!",
+                               "Try again!", addon_dir))
 
 
 def execute(path, params):
@@ -610,12 +596,11 @@ def execute(path, params):
     if len(splitted_path) < 2:
         return
 
-
     mac = splitted_path[1]
 
     if "silent" not in params:
         xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
-                        % (params["msg"][0], "Be patient ...", addon_dir))
+                            % (params["msg"][0], "Be patient ...", addon_dir))
 
     try:
         output = _exec_gatttool(mac, params["send"])
@@ -623,16 +608,15 @@ def execute(path, params):
 
         if "silent" not in params:
             xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
-                        % (params["msg"][0], "successful", addon_dir))
+                                % (params["msg"][0], "successful", addon_dir))
 
             xbmc.executebuiltin('Container.Update("plugin://%s/%s?status=%s","update")'
-                        % (__PLUGIN_ID__, mac, json.dumps(status)))
+                                % (__PLUGIN_ID__, mac, json.dumps(status)))
 
     except Eq3Exception:
         if "silent" not in params:
             xbmc.executebuiltin("Notification(%s, %s, %s/icon.png)"
-                        % (params["msg"][0], "Failed! Try again", addon_dir))
-
+                                % (params["msg"][0], "Failed! Try again", addon_dir))
 
 
 if __name__ == '__main__':
@@ -641,8 +625,8 @@ if __name__ == '__main__':
         discover()
     else:
         addon_handle = int(sys.argv[1])
-        path = urlparse.urlparse(sys.argv[0]).path
-        url_params = urlparse.parse_qs(sys.argv[2][1:])
+        path = urllib.parse.urlparse(sys.argv[0]).path
+        url_params = urllib.parse.parse_qs(sys.argv[2][1:])
 
         if "send" in url_params:
             execute(path, url_params)
